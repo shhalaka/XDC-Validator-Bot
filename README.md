@@ -1,51 +1,65 @@
-XDC-Validator-Bot
-Automated Twitter/X bot for monitoring XDC Network health, validator statistics, 
-and on-chain token events such as mint, burn, and large transfers.
+# XDCAlert
 
-Project Status
-This project is currently under active development.
-Additional features and refinements are being added as part of ongoing work.
+Node.js service that listens to `XDCValidator` contract events on the XDC network and posts a tweet per event.
 
-Current Features
-- Automated posting to Twitter/X
-- Daily network statistics (in progress)
-- On-chain event detection for mint, burn, and high-value transfers(in progress)
-- Validator and standby node monitoring (in progress)
-- Logging and error tracking
+## What it watches
 
-Tech Stack
-- Node.js
-- TypeScript
-- Twitter/X API
-- Cron jobs / scheduled tasks
+It listens to these events (from your provided contract):
 
-Project Structure
-src/
-bot/
-services/
-stats/
-utils/
-index.ts
+- `Vote(_voter, _candidate, _cap)`
+- `Unvote(_voter, _candidate, _cap)`
+- `Propose(_owner, _candidate, _cap)`
+- `Resign(_owner, _candidate)`
+- `Withdraw(_owner, _blockNumber, _cap)`
+- `UploadedKYC(_owner, kycHash)`
+- `InvalidatedNode(_masternodeOwner, _masternodes)`
 
-Setup (Development)
-1. Clone the repository
-2. Install dependencies - npm install
-3. Create a `.env` file using `.env.example`
-4. Run the bot - npm run dev
+Each tweet includes the event type, key addresses, cap (when present), block number, and an explorer link to the transaction.
 
-Environment Variables
-The following environment variables are required:
-- TWITTER_API_KEY
-- TWITTER_API_SECRET
-- TWITTER_ACCESS_TOKEN
-- TWITTER_ACCESS_SECRET
-- RPC_URL
-- LOG_FILE_PATH
+## Setup
 
-Notes
-- This repository is shared for monitoring development progress.
-- Production deployment and final configuration are in progress.
+1) Install deps (you can use `bun` or `npm`):
 
+```bash
+bun install
+```
 
+2) Create your env file:
+
+- Copy `config/example.env` to `.env` (or `config/local.env`) and fill values.
+- If you don’t want `.env`, you can also set `ENV_FILE=/full/path/to/your.env` before running.
+
+Required:
+- `RPC_HTTP_URL`
+- `CONTRACT_ADDRESS` (accepts `0x...` or `xdc...`)
+- Twitter keys:
+  - `TWITTER_APP_KEY`
+  - `TWITTER_APP_SECRET`
+  - `TWITTER_ACCESS_TOKEN`
+  - `TWITTER_ACCESS_SECRET`
+
+Helpful:
+- `START_BLOCK` (set this once on first run so you control where it starts)
+- `DRY_RUN=true` (prints tweets instead of posting)
+
+## Run
+
+Dev (watch):
+
+```bash
+bun dev
+```
+
+Build + start:
+
+```bash
+bun run build
+bun start
+```
+
+## Notes
+
+- The service checkpoints the last processed block and processed event IDs in `.data/checkpoint.json` so it does not double-tweet after restarts.
+- It polls via HTTP RPC (no websocket required).
 
 
