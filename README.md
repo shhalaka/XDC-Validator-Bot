@@ -18,10 +18,10 @@ Each tweet includes the event type, key addresses, cap (when present), block num
 
 ## Setup
 
-1) Install deps (you can use `bun` or `npm`):
+1) Install deps (you can use `npm`):
 
 ```bash
-bun install
+npm install
 ```
 
 2) Create your env file:
@@ -47,14 +47,14 @@ Helpful:
 Dev (watch):
 
 ```bash
-bun dev
+npm run dev
 ```
 
 Build + start:
 
 ```bash
-bun run build
-bun start
+npm run build
+npm start
 ```
 
 ## Notes
