@@ -17,9 +17,13 @@ import {
 import {
   recordResignedValidator,
   recordProposedValidator,
-  validatorDailyStats
+  validatorDailyStats,
+  setActiveValidators,
+  recordVote,
+  recordUnvote,
+  recordWithdraw,
+  getActiveValidators
 } from "../stats/validatorStats.js";
-import { getActiveValidators } from "../stats/validatorStats.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -42,6 +46,12 @@ export async function runXdcValidatorWatcher(cfg: AppConfig): Promise<void> {
   const provider = new ethers.JsonRpcProvider(cfg.rpcHttpUrl);
   const iface = new ethers.Interface(XDC_VALIDATOR_ABI);
 
+  const validatorContract = new ethers.Contract(
+    cfg.contractAddress,
+    XDC_VALIDATOR_ABI,
+    provider
+  );
+
   const store = new CheckpointStore({ filePath: ".data/checkpoint.json" });
 
   const twitter = new TwitterPoster({
@@ -51,6 +61,44 @@ export async function runXdcValidatorWatcher(cfg: AppConfig): Promise<void> {
     accessSecret: cfg.twitterAccessSecret ?? "",
     dryRun: cfg.dryRun
   });
+
+  // Automated validator stats tweet (TEMP / DEMO)
+  const VALIDATOR_STATS_INTERVAL_MS = 2 * 60 * 1000; // 2 mins testing
+  const DEMO_FORCE_TWEET = true; // TEMP: force one stats tweet for demo
+
+  setInterval(async () => {
+    try {
+    // Skip tweeting if there is no validator activity
+      if (
+        !DEMO_FORCE_TWEET &&
+        validatorDailyStats.proposed === 0 &&
+        validatorDailyStats.resigned === 0 &&
+        validatorDailyStats.vote === 0 &&
+        validatorDailyStats.unvote === 0 &&
+        validatorDailyStats.withdraw === 0
+      ) {
+        return;
+      }
+
+      const text = `
+  📊 XDC Validator Activity
+
+  ➕  Proposed: ${validatorDailyStats.proposed}
+  ➖ Resigned: ${validatorDailyStats.resigned}
+  🗳 Votes: ${validatorDailyStats.vote}
+  ↩️ Unvotes: ${validatorDailyStats.unvote}
+  💸 Withdrawals: ${validatorDailyStats.withdraw}
+
+  🟢 Active Validators: ${getActiveValidators()}
+
+  #XDCNetwork #Validators #XDC #BuildOnXDC
+  `.trim();
+
+    await twitter.postTweet(text);
+  } catch (err) {
+    console.error("Validator stats tweet failed:", err);
+  }
+}, VALIDATOR_STATS_INTERVAL_MS);
 
   const DEFAULT_ALERT_IMAGE = path.resolve(
     __dirname,
@@ -112,6 +160,7 @@ export async function runXdcValidatorWatcher(cfg: AppConfig): Promise<void> {
         continue;
       }
 
+      // Token stats
       if (parsed?.name === "Transfer") {
         const from = String(parsed.args.from).toLowerCase();
         const to = String(parsed.args.to).toLowerCase();
@@ -121,36 +170,37 @@ export async function runXdcValidatorWatcher(cfg: AppConfig): Promise<void> {
         else if (to === ZERO_ADDRESS) recordBurn(value);
         else recordTransfer();
 
-        console.log("Daily statistics snapshot:", {
+        console.log("Daily token stats:", {
           mint: dailyStats.mint.toString(),
           burn: dailyStats.burn.toString(),
           transferCount: dailyStats.transferCount
         });
       }
 
-      if (parsed?.name === "Propose") {
-        recordProposedValidator();
-      }
+      // Validator stats
+      if (parsed?.name === "Propose") recordProposedValidator();
+      if (parsed?.name === "Resign") recordResignedValidator();
+      if (parsed?.name === "Vote") recordVote();
+      if (parsed?.name === "Unvote") recordUnvote();
+      if (parsed?.name === "Withdraw") recordWithdraw();
 
-      if (parsed?.name === "Resign") {
-        recordResignedValidator();
-      }
-
-      console.log("Validator health:", {
-        proposed: validatorDailyStats.proposed,
-        resigned: validatorDailyStats.resigned,
-        active: getActiveValidators()
-      });
-
-      if (parsed?.name === "Propose") {
-        recordProposedValidator();
-
-        console.log("Validator statistics snapshot:", {
+      if (
+        parsed?.name === "Propose" ||
+        parsed?.name === "Resign" ||
+        parsed?.name === "Vote" ||
+        parsed?.name === "Unvote" ||
+        parsed?.name === "Withdraw"
+      ) {
+        console.log("Validator health:", {
+          proposed: validatorDailyStats.proposed,
           resigned: validatorDailyStats.resigned,
-          proposed: validatorDailyStats.proposed
+          vote: validatorDailyStats.vote,
+          unvote: validatorDailyStats.unvote,
+          withdraw: validatorDailyStats.withdraw,
+          active: getActiveValidators()
         });
       }
-      
+
       const res = formatTweetForLog(iface, log, {
         nativeSymbol: cfg.nativeSymbol,
         txExplorerBase: cfg.txExplorerBase,

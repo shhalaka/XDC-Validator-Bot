@@ -92,7 +92,7 @@ export function formatTweetForLog(
 
       lines.push(`⚠️ Validator Resignation Detected | 👨🏻‍💼 Owner: ${toXdcAddress(shortAddr(owner))}`);
       lines.push(`💼 Candidate: ${toXdcAddress(shortAddr(candidate))}`);
-      lines.push(`🌐 Network: XDC Mainnet | ✅ Status: Confirmed on-chain`);
+      lines.push(`🌐 Network: XDC Mainnet`);
       break;
     }
 
