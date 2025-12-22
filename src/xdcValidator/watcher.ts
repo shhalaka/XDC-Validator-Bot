@@ -8,9 +8,23 @@ import { CheckpointStore } from "../store/checkpoint.js";
 import { sleep } from "../utils/sleep.js";
 import { TwitterPoster } from "../twitter.js";
 import { formatTweetForLog } from "./tweetFormatter.js";
+import {
+  recordMint,
+  recordBurn,
+  recordTransfer,
+  dailyStats
+} from "../stats/dailyStats.js";
+import {
+  recordResignedValidator,
+  recordProposedValidator,
+  validatorDailyStats
+} from "../stats/validatorStats.js";
+import { getActiveValidators } from "../stats/validatorStats.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 function sortLogs(a: Log, b: Log): number {
   const ab = a.blockNumber ?? 0;
@@ -38,7 +52,6 @@ export async function runXdcValidatorWatcher(cfg: AppConfig): Promise<void> {
     dryRun: cfg.dryRun
   });
 
-  // Default image used for all tweets
   const DEFAULT_ALERT_IMAGE = path.resolve(
     __dirname,
     "..",
@@ -69,16 +82,11 @@ export async function runXdcValidatorWatcher(cfg: AppConfig): Promise<void> {
   else if (cfg.startBlock !== undefined) fromBlock = cfg.startBlock;
   else fromBlock = safeLatest - 5000;
 
-  // Don't start from "future" relative to the confirmed tip.
   if (fromBlock > safeLatest) fromBlock = safeLatest;
 
   console.log(
     `Watching XDCValidator at ${cfg.contractAddress} via ${cfg.rpcHttpUrl}`
   );
-  console.log(
-    `Starting from block ${fromBlock} (confirmations=${cfg.confirmations}, maxBlocksPerQuery=${cfg.maxBlocksPerQuery})`
-  );
-  if (cfg.dryRun) console.log("DRY_RUN enabled: will not post tweets.");
 
   while (true) {
     const tip = await getLatestBlock();
@@ -97,6 +105,52 @@ export async function runXdcValidatorWatcher(cfg: AppConfig): Promise<void> {
     const logs = (await getLogs(fromBlock, toBlock)).sort(sortLogs);
 
     for (const log of logs) {
+      let parsed;
+      try {
+        parsed = iface.parseLog(log);
+      } catch {
+        continue;
+      }
+
+      if (parsed?.name === "Transfer") {
+        const from = String(parsed.args.from).toLowerCase();
+        const to = String(parsed.args.to).toLowerCase();
+        const value = parsed.args.value as bigint;
+
+        if (from === ZERO_ADDRESS) recordMint(value);
+        else if (to === ZERO_ADDRESS) recordBurn(value);
+        else recordTransfer();
+
+        console.log("Daily statistics snapshot:", {
+          mint: dailyStats.mint.toString(),
+          burn: dailyStats.burn.toString(),
+          transferCount: dailyStats.transferCount
+        });
+      }
+
+      if (parsed?.name === "Propose") {
+        recordProposedValidator();
+      }
+
+      if (parsed?.name === "Resign") {
+        recordResignedValidator();
+      }
+
+      console.log("Validator health:", {
+        proposed: validatorDailyStats.proposed,
+        resigned: validatorDailyStats.resigned,
+        active: getActiveValidators()
+      });
+
+      if (parsed?.name === "Propose") {
+        recordProposedValidator();
+
+        console.log("Validator statistics snapshot:", {
+          resigned: validatorDailyStats.resigned,
+          proposed: validatorDailyStats.proposed
+        });
+      }
+      
       const res = formatTweetForLog(iface, log, {
         nativeSymbol: cfg.nativeSymbol,
         txExplorerBase: cfg.txExplorerBase,
@@ -106,9 +160,7 @@ export async function runXdcValidatorWatcher(cfg: AppConfig): Promise<void> {
       if (!res) continue;
       if (store.hasEvent(res.eventId)) continue;
 
-      // Image tweet
       await twitter.postTweet(res.text, DEFAULT_ALERT_IMAGE);
-
       store.markEvent(res.eventId);
 
       if (cfg.tweetDelayMs > 0) {
