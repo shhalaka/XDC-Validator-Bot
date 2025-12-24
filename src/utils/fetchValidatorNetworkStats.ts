@@ -1,4 +1,4 @@
-import fetch from "node-fetch";
+import { validatorDailyStats } from "../stats/validatorStats.js";
 
 export type NetworkValidatorStats = {
   active: number;
@@ -8,41 +8,18 @@ export type NetworkValidatorStats = {
 };
 
 export async function fetchValidatorNetworkStats(): Promise<NetworkValidatorStats> {
-  const url = "https://mn.xinfin.network/api/candidates/masternodes";
+  const active = validatorDailyStats.active ?? 0;
+  const standby = validatorDailyStats.standby ?? 0;
+  const owners = validatorDailyStats.owners ?? 0;
 
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`XDC masternode API failed: ${res.status}`);
-  }
+  const total = active + standby;
 
-  const json: any = await res.json();
-
-  console.log(
-        "Masternode API keys:",
-        Object.keys(json),
-        "nested data keys:",
-        json?.data ? Object.keys(json.data) : "no data"
-    );
-
-  //Robust candidate extraction
-  const candidates = Array.isArray(json?.items) ? json.items : [];
-
-  if (candidates.length === 0) {
-    console.warn("Masternode API returned zero candidates");
-    return { active: 0, standby: 0, total: 0, owners: 0 };
-  }
-
-  const total = candidates.length;
-
-  const active = candidates.filter(
-    (c: any) => c.status === "MASTERNODE"
-).length;
-
-  const standby = candidates.filter(
-    (c: any) => c.status !== "MASTERNODE"
-).length;
-
-  const owners = new Set(candidates.map((c: any) => c.owner)).size;
+  console.log("RPC-derived (event-based) validator stats:", {
+    active,
+    standby,
+    total,
+    owners
+  });
 
   return { active, standby, total, owners };
 }

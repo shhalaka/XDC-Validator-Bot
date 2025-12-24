@@ -47,12 +47,6 @@ export async function runXdcValidatorWatcher(cfg: AppConfig): Promise<void> {
   const provider = new ethers.JsonRpcProvider(cfg.rpcHttpUrl);
   const iface = new ethers.Interface(XDC_VALIDATOR_ABI);
 
-  const validatorContract = new ethers.Contract(
-    cfg.contractAddress,
-    XDC_VALIDATOR_ABI,
-    provider
-  );
-
   const store = new CheckpointStore({ filePath: ".data/checkpoint.json" });
 
   const twitter = new TwitterPoster({

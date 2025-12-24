@@ -24,10 +24,12 @@ export const validatorDailyStats: ValidatorDailyStats = {
 
 export function recordResignedValidator() {
   validatorDailyStats.resigned += 1;
+  recomputeNetworkStats();  
 }
 
 export function recordProposedValidator() {
   validatorDailyStats.proposed += 1;
+  recomputeNetworkStats();
 }
 
 export function recordVote() {
@@ -45,12 +47,9 @@ export function recordWithdraw() {
 //network snapshot setters
 
 export function setNetworkValidatorStats(params: {
-  active: number;
-  total: number;
   owners: number;
 }) {
-  validatorDailyStats.active = params.active;
-  validatorDailyStats.standby = params.total - params.active;
+  // Only owners can be externally set (optional / future)
   validatorDailyStats.owners = params.owners;
 }
 
@@ -62,7 +61,18 @@ export function resetValidatorDailyStats() {
   validatorDailyStats.vote = 0;
   validatorDailyStats.unvote = 0;
   validatorDailyStats.withdraw = 0;
-  validatorDailyStats.active = null;
-  validatorDailyStats.standby = null;
-  validatorDailyStats.owners = null;
+}
+
+export function recomputeNetworkStats() {
+  const proposed = validatorDailyStats.proposed;
+  const resigned = validatorDailyStats.resigned;
+
+  // Active validators are proposed minus resigned
+  const active = Math.max(0, proposed - resigned);
+
+  // Standby validators are proposed but not active
+  const standby = Math.max(0, proposed - active);
+
+  validatorDailyStats.active = active;
+  validatorDailyStats.standby = standby;
 }

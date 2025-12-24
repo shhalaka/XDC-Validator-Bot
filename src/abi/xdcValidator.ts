@@ -9,4 +9,26 @@ export const XDC_VALIDATOR_ABI = [
   "event InvalidatedNode(address _masternodeOwner, address[] _masternodes)"
 ] as const;
 
-
+export const XDC_VALIDATOR_MIN_ABI = [
+  {
+    inputs: [],
+    name: "getValidators",
+    outputs: [{ internalType: "address[]", name: "", type: "address[]" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "getActiveValidators",
+    outputs: [{ internalType: "address[]", name: "", type: "address[]" }],
+    stateMutability: "view",
+    type: "function"
+  },
+  {
+    inputs: [],
+    name: "getProposedValidators",
+    outputs: [{ internalType: "address[]", name: "", type: "address[]" }],
+    stateMutability: "view",
+    type: "function"
+  }
+] as const;
