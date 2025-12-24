@@ -4,6 +4,9 @@ export type ValidatorDailyStats = {
   vote: number;
   unvote: number;
   withdraw: number;
+  active: number | null;
+  standby: number | null;
+  owners: number | null;
 };
 
 export const validatorDailyStats: ValidatorDailyStats = {
@@ -12,7 +15,12 @@ export const validatorDailyStats: ValidatorDailyStats = {
   vote: 0,
   unvote: 0,
   withdraw: 0,
+  active: null,
+  standby: null,
+  owners: null,
 };
+
+//event counters 
 
 export function recordResignedValidator() {
   validatorDailyStats.resigned += 1;
@@ -34,20 +42,27 @@ export function recordWithdraw() {
   validatorDailyStats.withdraw += 1;
 }
 
+//network snapshot setters
+
+export function setNetworkValidatorStats(params: {
+  active: number;
+  total: number;
+  owners: number;
+}) {
+  validatorDailyStats.active = params.active;
+  validatorDailyStats.standby = params.total - params.active;
+  validatorDailyStats.owners = params.owners;
+}
+
+//daily reset
+
 export function resetValidatorDailyStats() {
   validatorDailyStats.resigned = 0;
   validatorDailyStats.proposed = 0;
   validatorDailyStats.vote = 0;
   validatorDailyStats.unvote = 0;
   validatorDailyStats.withdraw = 0;
-}
-
-let activeValidators = 0;
-
-export function setActiveValidators(count: number) {
-  activeValidators = count;
-}
-
-export function getActiveValidators() {
-  return activeValidators;
+  validatorDailyStats.active = null;
+  validatorDailyStats.standby = null;
+  validatorDailyStats.owners = null;
 }

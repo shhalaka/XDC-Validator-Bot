@@ -18,12 +18,13 @@ import {
   recordResignedValidator,
   recordProposedValidator,
   validatorDailyStats,
-  setActiveValidators,
   recordVote,
   recordUnvote,
   recordWithdraw,
-  getActiveValidators
 } from "../stats/validatorStats.js";
+import { fetchValidatorNetworkStats } from "../utils/fetchValidatorNetworkStats.js";
+import { setNetworkValidatorStats } from "../stats/validatorStats.js";
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -79,20 +80,31 @@ export async function runXdcValidatorWatcher(cfg: AppConfig): Promise<void> {
       ) {
         return;
       }
+      
+      // Fetch live network validator stats (active / total / owners)
+      try {
+        const networkStats = await fetchValidatorNetworkStats();
+        setNetworkValidatorStats(networkStats);
+      } catch (err) {
+        console.error("Failed to fetch network validator stats:", err);
+    }
 
       const text = `
-  📊 XDC Validator Activity
+📊 XDC Validator Activity
 
-  ➕  Proposed: ${validatorDailyStats.proposed}
-  ➖ Resigned: ${validatorDailyStats.resigned}
-  🗳 Votes: ${validatorDailyStats.vote}
-  ↩️ Unvotes: ${validatorDailyStats.unvote}
-  💸 Withdrawals: ${validatorDailyStats.withdraw}
+➕ Proposed: ${validatorDailyStats.proposed}
+➖ Resigned: ${validatorDailyStats.resigned}
+🗳 Votes: ${validatorDailyStats.vote}
+↩ Unvotes: ${validatorDailyStats.unvote}
+💸 Withdrawals: ${validatorDailyStats.withdraw}
 
-  🟢 Active Validators: ${getActiveValidators()}
+🟢 Network Status:
+🔹 Active Validators (Nodes): ${validatorDailyStats.active ?? "—"}
+⏸ Standby Validators: ${validatorDailyStats.standby ?? "—"}
+👤 Validator Owners: ${validatorDailyStats.owners ?? "—"}
 
-  #XDCNetwork #Validators #XDC #BuildOnXDC
-  `.trim();
+#XDCNetwork #Validators #XDC 
+`.trim();
 
     await twitter.postTweet(text);
   } catch (err) {
@@ -197,7 +209,9 @@ export async function runXdcValidatorWatcher(cfg: AppConfig): Promise<void> {
           vote: validatorDailyStats.vote,
           unvote: validatorDailyStats.unvote,
           withdraw: validatorDailyStats.withdraw,
-          active: getActiveValidators()
+          active: validatorDailyStats.active,
+          standby: validatorDailyStats.standby,
+          owners: validatorDailyStats.owners
         });
       }
 
