@@ -1,4 +1,10 @@
+import { ethers } from "ethers";
 import { validatorDailyStats } from "../stats/validatorStats.js";
+
+const VALIDATOR_MIN_ABI = [
+  "function candidateCount() view returns (uint256)",
+  "function getOwnerCount() view returns (uint256)"
+];
 
 export type NetworkValidatorStats = {
   active: number;
@@ -7,19 +13,49 @@ export type NetworkValidatorStats = {
   owners: number;
 };
 
-export async function fetchValidatorNetworkStats(): Promise<NetworkValidatorStats> {
-  const active = validatorDailyStats.active ?? 0;
-  const standby = validatorDailyStats.standby ?? 0;
-  const owners = validatorDailyStats.owners ?? 0;
+export async function fetchValidatorNetworkStats(
+  provider: ethers.JsonRpcProvider,
+  contractAddress: string
+): Promise<NetworkValidatorStats> {
 
-  const total = active + standby;
+  const contract = new ethers.Contract(
+    contractAddress,
+    VALIDATOR_MIN_ABI,
+    provider
+  );
 
-  console.log("RPC-derived (event-based) validator stats:", {
+  // Proposed / Total validators
+  const totalBig = await contract.candidateCount();
+  const total = Number(totalBig);
+
+  // Owners
+  const ownersBig = await contract.getOwnerCount();
+  const owners = Number(ownersBig);
+
+  // Resigned validators 
+  const resigned = validatorDailyStats.resigned;
+
+  // Active & Standby
+  const active = Math.max(0, total - resigned);
+  const standby = Math.max(0, total - active);
+
+  // Inject into existing state (minimal change)
+  validatorDailyStats.proposed = total;
+  validatorDailyStats.active = active;
+  validatorDailyStats.standby = standby;
+  validatorDailyStats.owners = owners;
+
+  console.log("RPC-derived validator stats (contract-based):", {
+    total,
     active,
     standby,
-    total,
-    owners
+    resigned
   });
 
-  return { active, standby, total, owners };
+  return {
+    total,
+    active,
+    standby,
+    owners
+  };
 }

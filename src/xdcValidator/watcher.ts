@@ -77,14 +77,13 @@ export async function runXdcValidatorWatcher(cfg: AppConfig): Promise<void> {
       
       // Fetch live network validator stats (active / total / owners)
       try {
-        const networkStats = await fetchValidatorNetworkStats();
-        setNetworkValidatorStats(networkStats);
+        await fetchValidatorNetworkStats(provider, cfg.contractAddress);
       } catch (err) {
         console.error("Failed to fetch network validator stats:", err);
     }
 
       const text = `
-📊 XDC Validator Activity
+📊 XDC Validator Activity 📊
 
 ➕ Proposed: ${validatorDailyStats.proposed}
 ➖ Resigned: ${validatorDailyStats.resigned}
@@ -92,7 +91,8 @@ export async function runXdcValidatorWatcher(cfg: AppConfig): Promise<void> {
 ↩ Unvotes: ${validatorDailyStats.unvote}
 💸 Withdrawals: ${validatorDailyStats.withdraw}
 
-🟢 Network Status:
+🟢 Network Status 
+
 🔹 Active Validators (Nodes): ${validatorDailyStats.active ?? "—"}
 ⏸ Standby Validators: ${validatorDailyStats.standby ?? "—"}
 👤 Validator Owners: ${validatorDailyStats.owners ?? "—"}
@@ -100,7 +100,7 @@ export async function runXdcValidatorWatcher(cfg: AppConfig): Promise<void> {
 #XDCNetwork #Validators #XDC 
 `.trim();
 
-    await twitter.postTweet(text);
+    await twitter.postTweet(text, VALIDATOR_STATS_IMAGE);
   } catch (err) {
     console.error("Validator stats tweet failed:", err);
   }
@@ -112,6 +112,14 @@ export async function runXdcValidatorWatcher(cfg: AppConfig): Promise<void> {
     "assets",
     "alert.jpg"
   );
+
+  const VALIDATOR_STATS_IMAGE = path.resolve(
+    __dirname,
+    "..",
+    "assets",
+    "stat.jpeg"
+  );
+
 
   const getLatestBlock = async () =>
     await pRetry(() => provider.getBlockNumber(), { retries: 5 });
@@ -142,6 +150,40 @@ export async function runXdcValidatorWatcher(cfg: AppConfig): Promise<void> {
     `Watching XDCValidator at ${cfg.contractAddress} via ${cfg.rpcHttpUrl}`
   );
 
+  //BOOTSTRAP VALIDATOR STATE FROM HISTORICAL EVENTS
+console.log("Bootstrapping validator state from historical events...");
+
+// Decide how far back to scan
+const bootstrapFromBlock =
+  cfg.startBlock !== undefined
+    ? cfg.startBlock
+    : 0; // scan from genesis for initial state
+
+const bootstrapLogs = await provider.getLogs({
+  address: cfg.contractAddress,
+  fromBlock: bootstrapFromBlock,
+  toBlock: safeLatest
+});
+
+for (const log of bootstrapLogs) {
+  let parsed: ethers.LogDescription | null;
+  try {
+    parsed = iface.parseLog(log);
+  } catch {
+    continue;
+  }
+  if (!parsed) continue;
+
+  if (parsed.name === "Resign") {
+    recordResignedValidator();
+  }
+}
+
+console.log("Bootstrap complete:", {
+  resigned: validatorDailyStats.resigned,
+});
+fromBlock = safeLatest + 1;
+
   while (true) {
     const tip = await getLatestBlock();
     const toTip = Math.max(0, tip - cfg.confirmations);
@@ -159,12 +201,15 @@ export async function runXdcValidatorWatcher(cfg: AppConfig): Promise<void> {
     const logs = (await getLogs(fromBlock, toBlock)).sort(sortLogs);
 
     for (const log of logs) {
-      let parsed;
+      let parsed: ethers.LogDescription | null;
+
       try {
         parsed = iface.parseLog(log);
       } catch {
         continue;
       }
+
+      if (!parsed) continue;
 
       // Token stats
       if (parsed?.name === "Transfer") {
