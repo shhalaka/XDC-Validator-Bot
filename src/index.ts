@@ -3,7 +3,6 @@ import dotenv from "dotenv";
 import { loadConfig } from "./config.js";
 import { runXdcValidatorWatcher } from "./xdcValidator/watcher.js";
 
-
 async function main() {
   const explicitEnvFile = process.env.ENV_FILE;
   const envFile =

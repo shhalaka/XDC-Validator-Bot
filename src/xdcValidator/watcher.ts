@@ -23,7 +23,7 @@ import {
   recordWithdraw,
 } from "../stats/validatorStats.js";
 import { fetchValidatorNetworkStats } from "../utils/fetchValidatorNetworkStats.js";
-import { setNetworkValidatorStats } from "../stats/validatorStats.js";
+import { writeDailyValidatorSnapshot } from "../store/validatorSnapshots.js";
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -44,6 +44,12 @@ function sortLogs(a: Log, b: Log): number {
 }
 
 export async function runXdcValidatorWatcher(cfg: AppConfig): Promise<void> {
+  let lastSnapshotDate: string | null = null;
+
+  function todayUTC(): string {
+    return new Date().toISOString().slice(0, 10);
+  }
+
   const provider = new ethers.JsonRpcProvider(cfg.rpcHttpUrl);
   const iface = new ethers.Interface(XDC_VALIDATOR_ABI);
 
@@ -273,6 +279,14 @@ fromBlock = safeLatest + 1;
 
     store.setLastProcessedBlock(toBlock);
     fromBlock = toBlock + 1;
+
+    // Daily validator snapshot at UTC midnight
+    const currentDate = todayUTC();
+    if (lastSnapshotDate !== currentDate) {
+      writeDailyValidatorSnapshot(currentDate);
+      lastSnapshotDate = currentDate;
+      console.log(`[SNAPSHOT] Daily validator snapshot written for ${currentDate}`);
+    }
 
     await sleep(cfg.pollIntervalMs);
   }

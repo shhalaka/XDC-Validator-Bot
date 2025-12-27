@@ -39,7 +39,7 @@ export async function fetchValidatorNetworkStats(
   const active = Math.max(0, total - resigned);
   const standby = Math.max(0, total - active);
 
-  // Inject into existing state (minimal change)
+  // Inject into existing state 
   validatorDailyStats.proposed = total;
   validatorDailyStats.active = active;
   validatorDailyStats.standby = standby;
