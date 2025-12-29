@@ -283,6 +283,11 @@ fromBlock = safeLatest + 1;
     // Daily validator snapshot at UTC midnight
     const currentDate = todayUTC();
     if (lastSnapshotDate !== currentDate) {
+      try {
+          await fetchValidatorNetworkStats(provider, cfg.contractAddress);
+      } catch (err) {
+        console.error("Failed to fetch network stats before snapshot:", err);
+      }
       writeDailyValidatorSnapshot(currentDate);
       lastSnapshotDate = currentDate;
       console.log(`[SNAPSHOT] Daily validator snapshot written for ${currentDate}`);

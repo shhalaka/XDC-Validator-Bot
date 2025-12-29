@@ -71,12 +71,6 @@ export class TwitterPoster {
         const payload: SendTweetV2Params = { text };
 
         if (mediaIds) {
-          payload.media = {
-            media_ids: mediaIds as [string] 
-          };
-        }
-
-        if (mediaIds) {
           payload.media = { media_ids: [mediaIds[0]] };
         }
 

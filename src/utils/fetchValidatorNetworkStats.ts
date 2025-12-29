@@ -1,5 +1,6 @@
 import { ethers } from "ethers";
 import { validatorDailyStats } from "../stats/validatorStats.js";
+import { setNetworkValidatorStats } from "../stats/validatorStats.js";
 
 const VALIDATOR_MIN_ABI = [
   "function candidateCount() view returns (uint256)",
@@ -47,10 +48,16 @@ export async function fetchValidatorNetworkStats(
 
   console.log("RPC-derived validator stats (contract-based):", {
     total,
-    active,
-    standby,
-    resigned
+    active: validatorDailyStats.active,
+    standby: validatorDailyStats.standby,
+    resigned: validatorDailyStats.resigned
   });
+
+  setNetworkValidatorStats({
+  active,
+  standby,
+  owners
+});
 
   return {
     total,

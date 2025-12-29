@@ -47,9 +47,12 @@ export function recordWithdraw() {
 //network snapshot setters
 
 export function setNetworkValidatorStats(params: {
+  active: number;
+  standby: number;
   owners: number;
 }) {
-  // Only owners can be externally set (optional / future)
+  validatorDailyStats.active = params.active;
+  validatorDailyStats.standby = params.standby;
   validatorDailyStats.owners = params.owners;
 }
 
@@ -63,16 +66,4 @@ export function resetValidatorDailyStats() {
   validatorDailyStats.withdraw = 0;
 }
 
-export function recomputeNetworkStats() {
-  const proposed = validatorDailyStats.proposed;
-  const resigned = validatorDailyStats.resigned;
-
-  // Active validators are proposed minus resigned
-  const active = Math.max(0, proposed - resigned);
-
-  // Standby validators are proposed but not active
-  const standby = Math.max(0, proposed - active);
-
-  validatorDailyStats.active = active;
-  validatorDailyStats.standby = standby;
-}
+export function recomputeNetworkStats() { }

@@ -1,10 +1,10 @@
-import type { WeeklyValidatorStats } from "../stats/weeklyValidatorStats.js";
+import { YearlyValidatorStats } from "../stats/yearlyValidatorStats.js";
 
-export function formatWeeklyValidatorTweet(
-  stats: WeeklyValidatorStats
+export function formatYearlyValidatorTweet(
+  stats: YearlyValidatorStats
 ): string {
   return `
-📊 XDC Validator Stats (Weekly Summary) 📊
+📊 XDC Validator Stats (Yearly Summary) 📊
 
 ➕ Total Validators: ${stats.proposed}
 ➖ Resigned: ${stats.resigned}
@@ -13,7 +13,7 @@ export function formatWeeklyValidatorTweet(
 🟢 Active Validators: ${stats.avgActive}
 ⏸ Standby Validators: ${stats.avgStandby}
 
-📅 Period: ${stats.weekStart} → ${stats.weekEnd}
+📅 Period: ${stats.yearStart} → ${stats.yearEnd}
 
 #XDCNetwork #XDC #Validators #BuildOnXDC
 `.trim();
