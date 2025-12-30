@@ -12,7 +12,7 @@
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
     "cli": "node dist/cli.js",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json  && xcopy assets dist\\assets /E /I /Y",
     "format": "prettier -w ."
   },
   "dependencies": {

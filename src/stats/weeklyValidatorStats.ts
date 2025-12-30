@@ -40,28 +40,24 @@ function loadLast7Snapshots(): ValidatorDailySnapshot[] {
 
 export function computeWeeklyValidatorStats(): WeeklyValidatorStats | null {
   const snapshots = loadLast7Snapshots();
+  if (snapshots.length < 2) return null;
 
-  if (snapshots.length === 0) return null;
-
-  let proposed = 0;
-  let resigned = 0;
+  const firstDay = snapshots[0];
+  const lastDay = snapshots[snapshots.length - 1];
   let activeSum = 0;
   let standbySum = 0;
   let activeDays = 0;
   let standbyDays = 0;
 
   for (const day of snapshots) {
-        proposed += day.proposed;
-        resigned += day.resigned;
-
     if (typeof day.active === "number") {
       activeSum += day.active;
-      activeDays += 1;
+      activeDays ++;
     }
 
     if (typeof day.standby === "number") {
       standbySum += day.standby;
-      standbyDays += 1;
+      standbyDays ++;
     }
   }
 
@@ -69,10 +65,10 @@ export function computeWeeklyValidatorStats(): WeeklyValidatorStats | null {
     const avgStandby = standbyDays ? Math.round(standbySum / standbyDays) : 0;
 
   return {
-    weekStart: snapshots[0].date,
-    weekEnd: snapshots[snapshots.length - 1].date,
-    proposed,
-    resigned,
+    weekStart: firstDay.date,
+    weekEnd: lastDay.date,
+    proposed: lastDay.proposed - firstDay.proposed,
+    resigned: lastDay.resigned - firstDay.resigned,
     avgActive,
     avgStandby,
 };

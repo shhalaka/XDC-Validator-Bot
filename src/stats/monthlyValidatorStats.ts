@@ -26,42 +26,41 @@ function listSnapshotFiles(): string[] {
     .sort(); // YYYY-MM-DD.json sorts naturally
 }
 
-function loadLast30Snapshots(): ValidatorDailySnapshot[] {
+function loadCurrentMonthSnapshots(): ValidatorDailySnapshot[] {
   const files = listSnapshotFiles();
+  if (files.length === 0) return [];
 
-  const last30 = files.slice(-30);
+  const today = new Date().toISOString().slice(0, 7); // YYYY-MM
 
-  return last30.map((file) => {
-    const fullPath = path.join(SNAPSHOT_DIR, file);
-    const raw = fs.readFileSync(fullPath, "utf-8");
-    return JSON.parse(raw) as ValidatorDailySnapshot;
-  });
+  return files
+    .filter((file) => file.startsWith(today))
+    .map((file) => {
+      const fullPath = path.join(SNAPSHOT_DIR, file);
+      const raw = fs.readFileSync(fullPath, "utf-8");
+      return JSON.parse(raw) as ValidatorDailySnapshot;
+    });
 }
 
 export function computeMonthlyValidatorStats(): MonthlyValidatorStats | null {
-  const snapshots = loadLast30Snapshots();
+  const snapshots = loadCurrentMonthSnapshots();
+  if (snapshots.length < 2) return null;
 
-  if (snapshots.length === 0) return null;
-
-  let proposed = 0;
-  let resigned = 0;
+  const firstDay = snapshots[0];
+  const lastDay = snapshots[snapshots.length - 1];
   let activeSum = 0;
   let standbySum = 0;
   let activeDays = 0;
   let standbyDays = 0;
 
   for (const day of snapshots) {
-        proposed += day.proposed;
-        resigned += day.resigned;
-
     if (typeof day.active === "number") {
       activeSum += day.active;
-      activeDays += 1;
+      activeDays ++;
     }
 
     if (typeof day.standby === "number") {
       standbySum += day.standby;
-      standbyDays += 1;
+      standbyDays ++;
     }
   }
 
@@ -69,10 +68,10 @@ export function computeMonthlyValidatorStats(): MonthlyValidatorStats | null {
     const avgStandby = standbyDays ? Math.round(standbySum / standbyDays) : 0;
 
   return {
-    monthStart: snapshots[0].date,
-    monthEnd: snapshots[snapshots.length - 1].date,
-    proposed,
-    resigned,
+    monthStart: firstDay.date,
+    monthEnd: lastDay.date,
+    proposed: lastDay.proposed - firstDay.proposed,
+    resigned: lastDay.resigned - firstDay.resigned,
     avgActive,
     avgStandby,
 };

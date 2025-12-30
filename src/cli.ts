@@ -16,6 +16,12 @@ const WEEKLY_STATS_IMAGE = path.resolve(
   "weekstats.jpg"
   );
 
+const MASTERNODE_AWARENESS_IMAGE = path.resolve(
+  __dirname,
+  "assets",
+  "masternode.jpg" 
+);
+
 async function main() {
   const explicitEnvFile = process.env.ENV_FILE;
   const envFile =
@@ -58,6 +64,7 @@ async function main() {
       console.log("[CLI] Dry run mode — no actions executed");
       break;
     }
+    
     //Weekly validator stats tweet
     case "weekly-validator-stats": {
       const { computeWeeklyValidatorStats } =
@@ -148,12 +155,51 @@ async function main() {
       break;
     }
 
+    case "monthly-masternode-awareness": {
+      const { TwitterPoster } = await import("./twitter.js");
+      const { formatMasternodeAwarenessTweet } =
+        await import("./xdcValidator/masternodeAwarenessFormatter.js");
+
+      const rpcUrl = process.env.RPC_HTTP_URL;
+      const contractAddress = process.env.CONTRACT_ADDRESS;
+
+      if (!rpcUrl || !contractAddress) {
+        throw new Error("RPC_HTTP_URL or CONTRACT_ADDRESS missing in env");
+      }
+
+      const provider = new ethers.JsonRpcProvider(rpcUrl);
+
+      // fetch current validator network stats
+      const networkStats = await fetchValidatorNetworkStats(
+        provider,
+        contractAddress
+      );
+
+      const tweet = formatMasternodeAwarenessTweet({
+        active: networkStats.active,
+        standby: networkStats.standby
+      });
+
+      const twitter = new TwitterPoster({
+        appKey: cfg.twitterAppKey ?? "",
+        appSecret: cfg.twitterAppSecret ?? "",
+        accessToken: cfg.twitterAccessToken ?? "",
+        accessSecret: cfg.twitterAccessSecret ?? "",
+        dryRun: cfg.dryRun
+      });
+
+      await twitter.postTweet(tweet, MASTERNODE_AWARENESS_IMAGE);
+      console.log("[CLI] Monthly masternode awareness tweet sent");
+      break;
+    }
+
     default:
       console.error("Unknown command");
       console.error("Available commands:");
       console.error("weekly-validator-stats");
       console.error("monthly-validator-stats");
       console.error("yearly-validator-stats");
+      console.error("monthly-masternode-awareness");
       process.exitCode = 1;
   }
 }
