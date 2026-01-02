@@ -1,8 +1,9 @@
 import fs from "fs";
 import path from "path";
-import pRetry from "p-retry";
+import pRetry, { AbortError } from "p-retry";
 import { TwitterApi } from "twitter-api-v2";
 import type { SendTweetV2Params } from "twitter-api-v2";
+import { sleep } from "./utils/sleep.js"; 
 
 export type TwitterConfig = {
   appKey: string;
@@ -47,47 +48,63 @@ export class TwitterPoster {
     return await this.client.v1.uploadMedia(imageBuffer, { mimeType });
   }
 
-  async postTweet(
-    text: string,
-    imagePath?: string
-  ): Promise<{ id?: string }> {
-    if (this.dryRun) {
-      console.log("[DRY_RUN] tweet:", text);
-      if (imagePath) console.log("[DRY_RUN] image:", imagePath);
-      return {};
-    }
-
-    if (!this.client) throw new Error("Twitter client not initialized");
-
-    return await pRetry(
-      async () => {
-        let mediaIds: string[] | undefined;
-
-        if (imagePath) {
-          const mediaId = await this.uploadImage(imagePath);
-          mediaIds = [mediaId];
-        }
-
-        const payload: SendTweetV2Params = { text };
-
-        if (mediaIds) {
-          payload.media = { media_ids: [mediaIds[0]] };
-        }
-
-        const res = await this.client!.v2.tweet(payload);
-        return { id: res.data.id };
-      },
-      {
-        retries: 5,
-        minTimeout: 1_000,
-        maxTimeout: 30_000,
-        onFailedAttempt: (err) => {
-          console.warn(
-            `Tweet failed (attempt ${err.attemptNumber}):`,
-            err.message
-          );
-        }
-      }
-    );
+async postTweet(
+  text: string,
+  imagePath?: string
+): Promise<{ id?: string }> {
+  if (this.dryRun) {
+    console.log("[DRY_RUN] tweet:", text);
+    if (imagePath) console.log("[DRY_RUN] image:", imagePath);
+    return {};
   }
+
+  const client = this.client;
+  if (!client) throw new Error("Twitter client not initialized");
+
+  return await pRetry(
+    async () => {
+      let mediaIds: [string] | undefined;
+
+      if (imagePath) {
+        const mediaId = await this.uploadImage(imagePath);
+        mediaIds = [mediaId];
+      }
+
+      const payload: SendTweetV2Params = { text };
+
+      if (mediaIds) {
+        payload.media = { media_ids: mediaIds };
+      }
+
+      const res = await client.v2.tweet(payload);
+      return { id: res.data.id };
+    },
+    {
+      retries: 3, 
+      onFailedAttempt: async (error: any) => {
+        const status =
+          error?.response?.status ||
+          error?.status ||
+          error?.code;
+
+        //Handle rate limiting explicitly
+        if (status === 429) {
+          const retryAfter =
+            Number(error?.response?.headers?.["retry-after"]) || 60;
+
+          console.warn(
+            `Rate limit hit (429). Waiting ${retryAfter}s before retrying (attempt ${error.attemptNumber})`
+          );
+
+          await sleep(retryAfter * 1000);
+          return;
+        }
+
+        //Non-retryable errors → stop immediately
+        console.error("Non-retryable Twitter error:", error.message);
+        throw new AbortError(error);
+      }
+    }
+  );
+}
 }
