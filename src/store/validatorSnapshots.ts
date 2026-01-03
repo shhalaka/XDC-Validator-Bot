@@ -2,7 +2,6 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { validatorDailyStats } from "../stats/validatorStats.js";
-import { recomputeNetworkStats } from "../stats/validatorStats.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,7 +20,6 @@ export interface ValidatorDailySnapshot {
   owners: number | null;
 }
 
-
 function ensureDir() {
   if (!fs.existsSync(SNAPSHOT_DIR)) {
     fs.mkdirSync(SNAPSHOT_DIR, { recursive: true });
@@ -34,12 +32,11 @@ function today(): string {
 
 export function writeDailyValidatorSnapshot(date = today()) {
   ensureDir();
-  recomputeNetworkStats();
   
   const snapshot: ValidatorDailySnapshot = {
   date,
-  resigned: validatorDailyStats.resigned,
   proposed: validatorDailyStats.proposed,
+  resigned: validatorDailyStats.resigned,
   vote: validatorDailyStats.vote,
   unvote: validatorDailyStats.unvote,
   withdraw: validatorDailyStats.withdraw,

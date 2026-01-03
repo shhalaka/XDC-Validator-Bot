@@ -22,14 +22,12 @@ export const validatorDailyStats: ValidatorDailyStats = {
 
 //event counters 
 
-export function recordResignedValidator() {
-  validatorDailyStats.resigned += 1;
-  recomputeNetworkStats();  
-}
-
 export function recordProposedValidator() {
   validatorDailyStats.proposed += 1;
-  recomputeNetworkStats();
+}
+
+export function recordResignedValidator() {
+  validatorDailyStats.resigned += 1;
 }
 
 export function recordVote() {
@@ -51,9 +49,15 @@ export function setNetworkValidatorStats(params: {
   standby: number;
   owners: number;
 }) {
+  if (params.active !== undefined) {
   validatorDailyStats.active = params.active;
-  validatorDailyStats.standby = params.standby;
-  validatorDailyStats.owners = params.owners;
+  }
+  if (params.standby !== undefined) {
+    validatorDailyStats.standby = params.standby;
+  }
+  if (params.owners !== undefined) {
+    validatorDailyStats.owners = params.owners;
+  }
 }
 
 //daily reset
@@ -65,5 +69,3 @@ export function resetValidatorDailyStats() {
   validatorDailyStats.unvote = 0;
   validatorDailyStats.withdraw = 0;
 }
-
-export function recomputeNetworkStats() { }

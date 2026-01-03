@@ -6,6 +6,7 @@ import { ethers } from "ethers";
 import { fetchValidatorNetworkStats } from "./utils/fetchValidatorNetworkStats.js";
 import path from "path";
 import { fileURLToPath } from "url";
+import { validatorDailyStats } from "./stats/validatorStats.js";  
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -176,8 +177,8 @@ async function main() {
       );
 
       const tweet = formatMasternodeAwarenessTweet({
-        active: networkStats.active,
-        standby: networkStats.standby
+        active: validatorDailyStats.active ?? 0,
+        standby: validatorDailyStats.standby ?? 0
       });
 
       const twitter = new TwitterPoster({

@@ -6,10 +6,10 @@ export function formatWeeklyValidatorTweet(
   return `
 📊 XDC Validator Stats (Weekly Summary) 📊
 
-➕ Total Validators: ${stats.proposed}
-➖ Resigned: ${stats.resigned}
+➕ Proposed (This Week): ${stats.proposed}
+➖ Resigned (This Week): ${stats.resigned}
 
-📈 Averages
+📈 Weekly Averages
 🟢 Active Validators: ${stats.avgActive}
 ⏸ Standby Validators: ${stats.avgStandby}
 

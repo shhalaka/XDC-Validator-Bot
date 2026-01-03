@@ -1,15 +1,12 @@
 import { ethers } from "ethers";
-import { validatorDailyStats } from "../stats/validatorStats.js";
-import { setNetworkValidatorStats } from "../stats/validatorStats.js";
+import { validatorDailyStats, setNetworkValidatorStats } from "../stats/validatorStats.js";
 
 const VALIDATOR_MIN_ABI = [
   "function candidateCount() view returns (uint256)",
-  "function getOwnerCount() view returns (uint256)"
+  "function getOwnerCount() view returns (uint256)",
 ];
 
 export type NetworkValidatorStats = {
-  active: number;
-  standby: number;
   total: number;
   owners: number;
 };
@@ -17,52 +14,30 @@ export type NetworkValidatorStats = {
 export async function fetchValidatorNetworkStats(
   provider: ethers.JsonRpcProvider,
   contractAddress: string
-): Promise<NetworkValidatorStats> {
-
+) {
   const contract = new ethers.Contract(
     contractAddress,
     VALIDATOR_MIN_ABI,
     provider
   );
 
-  // Proposed / Total validators
-  const totalBig = await contract.candidateCount();
-  const total = Number(totalBig);
-
-  // Owners
-  const ownersBig = await contract.getOwnerCount();
-  const owners = Number(ownersBig);
-
-  // Resigned validators 
+  const total = Number(await contract.candidateCount());
+  const owners = Number(await contract.getOwnerCount());
+  
   const resigned = validatorDailyStats.resigned;
-
-  // Active & Standby
   const active = Math.max(0, total - resigned);
-  const standby = Math.max(0, total - active);
-
-  // Inject into existing state 
-  validatorDailyStats.proposed = total;
-  validatorDailyStats.active = active;
-  validatorDailyStats.standby = standby;
-  validatorDailyStats.owners = owners;
-
-  console.log("RPC-derived validator stats (contract-based):", {
-    total,
-    active: validatorDailyStats.active,
-    standby: validatorDailyStats.standby,
-    resigned: validatorDailyStats.resigned
-  });
+  const standby = resigned;
 
   setNetworkValidatorStats({
-  active,
-  standby,
-  owners
-});
+    active,
+    standby,
+    owners,
+  });
 
   return {
     total,
     active,
     standby,
-    owners
+    owners,
   };
 }

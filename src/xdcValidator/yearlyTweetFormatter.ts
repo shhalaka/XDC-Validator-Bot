@@ -6,10 +6,10 @@ export function formatYearlyValidatorTweet(
   return `
 📊 XDC Validator Stats (Yearly Summary) 📊
 
-➕ Total Validators: ${stats.proposed}
-➖ Resigned: ${stats.resigned}
+➕ Proposed (This Year): ${stats.proposed}
+➖ Resigned (This Year): ${stats.resigned}
 
-📈 Averages
+📈 Yearly Averages
 🟢 Active Validators: ${stats.avgActive}
 ⏸ Standby Validators: ${stats.avgStandby}
 

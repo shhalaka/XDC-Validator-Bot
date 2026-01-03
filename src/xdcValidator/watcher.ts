@@ -91,14 +91,14 @@ export async function runXdcValidatorWatcher(cfg: AppConfig): Promise<void> {
       const text = `
 📊 XDC Validator Activity 📊
 
-➕ Proposed: ${validatorDailyStats.proposed}
-➖ Resigned: ${validatorDailyStats.resigned}
-🗳 Votes: ${validatorDailyStats.vote}
-↩ Unvotes: ${validatorDailyStats.unvote}
-💸 Withdrawals: ${validatorDailyStats.withdraw}
+➕ Proposed Today: ${validatorDailyStats.proposed}
+🗳 Votes Today: ${validatorDailyStats.vote}
+↩ Unvotes Today: ${validatorDailyStats.unvote}
+💸 Withdrawals Today: ${validatorDailyStats.withdraw}
 
 🟢 Network Status 
 
+➖ Total Resigned Validators: ${validatorDailyStats.resigned}
 🔹 Active Validators (Nodes): ${validatorDailyStats.active ?? "—"}
 ⏸ Standby Validators: ${validatorDailyStats.standby ?? "—"}
 👤 Validator Owners: ${validatorDailyStats.owners ?? "—"}
