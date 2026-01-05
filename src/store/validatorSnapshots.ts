@@ -8,6 +8,25 @@ const __dirname = path.dirname(__filename);
 
 const SNAPSHOT_DIR = path.resolve(__dirname, "../../data/validators");
 
+export function readLastValidatorSnapshot(): any | null {
+  try {
+    if (!fs.existsSync(SNAPSHOT_DIR)) return null;
+
+    const files = fs
+      .readdirSync(SNAPSHOT_DIR)
+      .filter(f => f.endsWith(".json"))
+      .sort();
+
+    if (files.length === 0) return null;
+
+    const latestFile = files[files.length - 1];
+    const raw = fs.readFileSync(path.join(SNAPSHOT_DIR, latestFile), "utf8");
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
 export interface ValidatorDailySnapshot {
   date: string;
   resigned: number;

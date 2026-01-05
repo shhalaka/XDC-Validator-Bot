@@ -23,7 +23,7 @@ import {
   recordWithdraw,
 } from "../stats/validatorStats.js";
 import { fetchValidatorNetworkStats } from "../utils/fetchValidatorNetworkStats.js";
-import { writeDailyValidatorSnapshot } from "../store/validatorSnapshots.js";
+import { writeDailyValidatorSnapshot, readLastValidatorSnapshot } from "../store/validatorSnapshots.js";
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -132,12 +132,18 @@ export async function runXdcValidatorWatcher(cfg: AppConfig): Promise<void> {
 
   const getLogs = async (fromBlock: number, toBlock: number) =>
     await pRetry(
-      () =>
-        provider.getLogs({
+      async () => {
+        const logs = await provider.getLogs({
           address: cfg.contractAddress,
           fromBlock,
           toBlock
-        }),
+        });
+
+        // small delay to avoid RPC burst / rate limit
+        await sleep(100);
+
+        return logs;
+      },
       { retries: 5 }
     );
 
@@ -156,39 +162,54 @@ export async function runXdcValidatorWatcher(cfg: AppConfig): Promise<void> {
     `Watching XDCValidator at ${cfg.contractAddress} via ${cfg.rpcHttpUrl}`
   );
 
+// Seed cumulative resigned count from last snapshot (if any)
+  const lastSnapshot = readLastValidatorSnapshot();
+  if (lastSnapshot?.resigned !== undefined) {
+    validatorDailyStats.resigned = lastSnapshot.resigned;
+  }
+
   //BOOTSTRAP VALIDATOR STATE FROM HISTORICAL EVENTS
-console.log("Bootstrapping validator state from historical events...");
+  console.log("Bootstrapping validator state from historical events...");
 
-// Decide how far back to scan
-const bootstrapFromBlock =
-  cfg.startBlock !== undefined
-    ? cfg.startBlock
-    : 0; // scan from genesis for initial state
+  const BOOTSTRAP_CHUNK_SIZE = 2000;
+  const bootstrapStart =
+    store.getLastProcessedBlock() ??
+    cfg.startBlock ??
+    Math.max(0, safeLatest - 50_000); // sane fallback
 
-const bootstrapLogs = await provider.getLogs({
-  address: cfg.contractAddress,
-  fromBlock: bootstrapFromBlock,
-  toBlock: safeLatest
+  for (
+    let start = bootstrapStart;
+    start <= safeLatest;
+    start += BOOTSTRAP_CHUNK_SIZE
+  ) {
+    const end = Math.min(start + BOOTSTRAP_CHUNK_SIZE - 1, safeLatest);
+
+    const logs = await getLogs(start, end);
+
+    for (const log of logs) {
+      let parsed: ethers.LogDescription | null;
+      try {
+        parsed = iface.parseLog(log);
+      } catch {
+        continue;
+      }
+      if (!parsed) continue;
+
+      if (parsed.name === "Resign") {
+        recordResignedValidator();
+      }
+    }
+
+    await sleep(300); // protect RPC
+  }
+
+  console.log("Bootstrap complete:", {
+    resigned: validatorDailyStats.resigned
 });
 
-for (const log of bootstrapLogs) {
-  let parsed: ethers.LogDescription | null;
-  try {
-    parsed = iface.parseLog(log);
-  } catch {
-    continue;
-  }
-  if (!parsed) continue;
-
-  if (parsed.name === "Resign") {
-    recordResignedValidator();
-  }
-}
-
-console.log("Bootstrap complete:", {
-  resigned: validatorDailyStats.resigned,
-});
-fromBlock = safeLatest + 1;
+  // resume AFTER bootstrap safely
+  fromBlock = safeLatest + 1;
+  store.setLastProcessedBlock(safeLatest);
 
   while (true) {
     const tip = await getLatestBlock();

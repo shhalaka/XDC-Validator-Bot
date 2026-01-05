@@ -20,6 +20,9 @@ export type AppConfig = {
   twitterAccessSecret?: string;
 
   dryRun: boolean;
+
+  //weekly
+  enableWeeklyStats: boolean;
 };
 
 function mustGetEnv(name: string): string {
@@ -78,7 +81,9 @@ export function loadConfig(): AppConfig {
       ? process.env.TWITTER_ACCESS_SECRET
       : mustGetEnv("TWITTER_ACCESS_SECRET"),
 
-    dryRun
+    dryRun,
+  
+    enableWeeklyStats: getEnvBool("ENABLE_WEEKLY_STATS", false),
   };
 }
 
