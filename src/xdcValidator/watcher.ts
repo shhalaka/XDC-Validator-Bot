@@ -309,7 +309,7 @@ export async function runXdcValidatorWatcher(cfg: AppConfig): Promise<void> {
       } catch (err) {
         console.error("Failed to fetch network stats before snapshot:", err);
       }
-      writeDailyValidatorSnapshot(currentDate);
+      writeDailyValidatorSnapshot(currentDate, toBlock);
       lastSnapshotDate = currentDate;
       console.log(`[SNAPSHOT] Daily validator snapshot written for ${currentDate}`);
     }

@@ -55,7 +55,7 @@ async function main() {
       await fetchValidatorNetworkStats(provider, contractAddress);
 
       // snapshot the populated validatorDailyStats
-      const snapshotPath = writeDailyValidatorSnapshot();
+      const snapshotPath = writeDailyValidatorSnapshot(undefined, 0);
 
       console.log(`[CLI] Validator snapshot written to ${snapshotPath}`);
       break;

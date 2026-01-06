@@ -35,7 +35,9 @@ export function scheduleWeeklyValidatorStats(
   // │ │ │ │ ┌──── day of week (0 = Sunday)
   // │ │ │ │ │
   // 10 0 * * 0  → Sunday 00:10 UTC
+  
   cron.schedule(
+    //"*/1 * * * *", for testing
     "10 0 * * 0",
     async () => {
       try {

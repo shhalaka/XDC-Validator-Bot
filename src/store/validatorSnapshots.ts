@@ -29,6 +29,7 @@ export function readLastValidatorSnapshot(): any | null {
 
 export interface ValidatorDailySnapshot {
   date: string;
+  blockNumber: number;
   resigned: number;
   proposed: number;
   vote: number;
@@ -49,11 +50,12 @@ function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-export function writeDailyValidatorSnapshot(date = today()) {
+export function writeDailyValidatorSnapshot(date = today(), blockNumber: number) {
   ensureDir();
   
   const snapshot: ValidatorDailySnapshot = {
   date,
+  blockNumber,
   proposed: validatorDailyStats.proposed,
   resigned: validatorDailyStats.resigned,
   vote: validatorDailyStats.vote,

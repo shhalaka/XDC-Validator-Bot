@@ -23,6 +23,15 @@ export type AppConfig = {
 
   //weekly
   enableWeeklyStats: boolean;
+
+  //monthly
+  enableMonthlyStats: boolean;
+
+  //yearly
+  enableYearlyStats: boolean;
+
+  //masternode awareness
+  enableMonthlyMasternodeAwareness: boolean;
 };
 
 function mustGetEnv(name: string): string {
@@ -84,6 +93,10 @@ export function loadConfig(): AppConfig {
     dryRun,
   
     enableWeeklyStats: getEnvBool("ENABLE_WEEKLY_STATS", false),
+    enableMonthlyStats: getEnvBool("ENABLE_MONTHLY_STATS", false),
+    enableYearlyStats: getEnvBool("ENABLE_YEARLY_STATS", false),
+
+    enableMonthlyMasternodeAwareness: getEnvBool("ENABLE_MASTERNODE_AWARENESS", false),
   };
 }
 
